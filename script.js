@@ -31,6 +31,53 @@ let map = null;
 let markers = [];
 let currentLocationData = null;
 
+// Function to get color based on NO₂ concentration value
+// Matches the legend color ranges: 0-10, 10-20, 20-30, 30-40, 50-60, 60-70
+function getColorForNO2(value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return '#aaaaaa'; // Default color when no data
+    }
+    
+    const no2Value = parseFloat(value);
+    
+    if (no2Value >= 0 && no2Value < 10) {
+        return '#7ed8ca'; // 0-10
+    } else if (no2Value >= 10 && no2Value < 20) {
+        return '#5eb5a7'; // 10-20
+    } else if (no2Value >= 20 && no2Value < 30) {
+        return '#3d9f90'; // 20-30
+    } else if (no2Value >= 30 && no2Value < 40) {
+        return '#267165'; // 30-40
+    } else if (no2Value >= 40 && no2Value < 50) {
+        return '#267165'; // 40-50 (using 30-40 color since legend skips this range)
+    } else if (no2Value >= 50 && no2Value < 60) {
+        return '#0c5554'; // 50-60
+    } else if (no2Value >= 60 && no2Value < 70) {
+        return '#043931'; // 60-70
+    } else if (no2Value >= 70) {
+        return '#043931'; // 70+ (using darkest color)
+    } else {
+        return '#aaaaaa'; // Default for negative values
+    }
+}
+
+// Function to get the last measurement's NO₂ value
+function getLastNO2Value(location) {
+    if (!location.measurements || location.measurements.length === 0) {
+        return null;
+    }
+    
+    // Sort measurements by date and get the most recent one
+    const sortedMeasurements = [...location.measurements].sort((a, b) => {
+        const dateA = new Date(a.start_date || a.end_date || 0);
+        const dateB = new Date(b.start_date || b.end_date || 0);
+        return dateB - dateA;
+    });
+    
+    const lastMeasurement = sortedMeasurements[0];
+    return lastMeasurement ? parseFloat(lastMeasurement.no2_concentration) : null;
+}
+
 // Function to render cities data
 function renderCities(citiesData) {
     const dataContainer = document.getElementById('data');
@@ -136,13 +183,17 @@ function updateMap(selectedCity) {
             const lng = parseFloat(location.longitude);
             
             if (!isNaN(lat) && !isNaN(lng)) {
-                // Create marker with custom icon (teal color to match design)
+                // Get the last NO₂ value for this location
+                const lastNO2Value = getLastNO2Value(location);
+                const markerColor = getColorForNO2(lastNO2Value);
+                
+                // Create marker with custom icon (color based on NO₂ value)
                 const marker = L.marker([lat, lng], {
                     icon: L.divIcon({
                         className: 'custom-marker',
-                        html: `<div style="background-color: #5ac8b3; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
+                        html: `<div style="background-color: ${markerColor}; width: 50px; height: 50px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [50, 50],
+                        iconAnchor: [25, 25]
                     })
                 }).addTo(map);
                 
