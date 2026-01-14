@@ -29,6 +29,7 @@ document.addEventListener('click', function(e) {
 let allCitiesData = [];
 let map = null;
 let markers = [];
+let currentLocationData = null;
 
 // Function to render cities data
 function renderCities(citiesData) {
@@ -135,21 +136,6 @@ function updateMap(selectedCity) {
             const lng = parseFloat(location.longitude);
             
             if (!isNaN(lat) && !isNaN(lng)) {
-                // Create popup content
-                let popupContent = `<strong>${location.name}</strong><br>`;
-                popupContent += `Coordinates: ${lat}, ${lng}<br>`;
-                if (location.description) {
-                    popupContent += `<em>${location.description}</em><br>`;
-                }
-                
-                // Add measurement info if available
-                if (location.measurements && location.measurements.length > 0) {
-                    popupContent += `<br><strong>Measurements:</strong><br>`;
-                    location.measurements.forEach(measurement => {
-                        popupContent += `NO₂: ${measurement.no2_concentration} μg/m³ (Tube: ${measurement.tube_id})<br>`;
-                    });
-                }
-                
                 // Create marker with custom icon (teal color to match design)
                 const marker = L.marker([lat, lng], {
                     icon: L.divIcon({
@@ -160,7 +146,14 @@ function updateMap(selectedCity) {
                     })
                 }).addTo(map);
                 
-                marker.bindPopup(popupContent);
+                // Store location data with marker
+                marker.locationData = location;
+                
+                // Bind click event to show location details panel
+                marker.on('click', function() {
+                    showLocationDetails(location);
+                });
+                
                 markers.push(marker);
                 bounds.push([lat, lng]);
             }
@@ -232,3 +225,149 @@ fetch('https://knmi.waijenbergmedia.nl/api/v1/cities?with=locations.measurements
         const dataContainer = document.getElementById('data');
         dataContainer.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
     });
+
+// Location details panel functionality
+const locationDetailsPanel = document.getElementById('locationDetailsPanel');
+const locationPanelOverlay = document.getElementById('locationPanelOverlay');
+const closeLocationPanel = document.getElementById('closeLocationPanel');
+
+function showLocationDetails(location) {
+    currentLocationData = location;
+    
+    // Update header information
+    const locationNameHeader = document.getElementById('locationNameHeader');
+    const locationValue = document.getElementById('locationValue');
+    const locationDate = document.getElementById('locationDate');
+    
+    locationNameHeader.textContent = location.name || 'Unknown Location';
+    
+    // Get the most recent measurement or calculate average
+    if (location.measurements && location.measurements.length > 0) {
+        const latestMeasurement = location.measurements[location.measurements.length - 1];
+        const avgValue = location.measurements.reduce((sum, m) => sum + parseFloat(m.no2_concentration || 0), 0) / location.measurements.length;
+        locationValue.textContent = `${Math.round(avgValue)} µg/m³`;
+        
+        // Set date from latest measurement
+        if (latestMeasurement.start_date) {
+            const date = new Date(latestMeasurement.start_date);
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            locationDate.textContent = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+        }
+    } else {
+        locationValue.textContent = 'N/A';
+        locationDate.textContent = 'No data';
+    }
+    
+    // Generate chart bars
+    generateChartBars(location);
+    
+    // Generate month selector
+    generateMonthSelector(location);
+    
+    // Show panel
+    locationDetailsPanel.classList.add('active');
+}
+
+function generateChartBars(location) {
+    const chartBars = document.getElementById('chartBars');
+    chartBars.innerHTML = '';
+    
+    if (!location.measurements || location.measurements.length === 0) {
+        return;
+    }
+    
+    // Get measurements and sort by date
+    const measurements = [...location.measurements]
+        .filter(m => m.start_date && !isNaN(parseFloat(m.no2_concentration)))
+        .sort((a, b) => {
+            return new Date(a.start_date) - new Date(b.start_date);
+        });
+    
+    if (measurements.length === 0) {
+        return;
+    }
+    
+    // Limit to last 12 measurements for better visualization
+    const displayMeasurements = measurements.slice(-12);
+    
+    // Calculate max value for scaling (add some padding)
+    const values = displayMeasurements.map(m => parseFloat(m.no2_concentration || 0));
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+    const range = maxValue - minValue;
+    const paddedMax = maxValue + (range * 0.1); // Add 10% padding
+    const chartHeight = 220; // Height of chart area in pixels
+    
+    // Create bars
+    displayMeasurements.forEach(measurement => {
+        const value = parseFloat(measurement.no2_concentration || 0);
+        const barHeight = paddedMax > 0 ? Math.max((value / paddedMax) * chartHeight, 5) : 5; // Minimum 5px height
+        
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        bar.style.height = `${barHeight}px`;
+        bar.title = `${value.toFixed(1)} µg/m³`;
+        chartBars.appendChild(bar);
+    });
+}
+
+function generateMonthSelector(location) {
+    const monthSelector = document.getElementById('locationMonthSelector');
+    monthSelector.innerHTML = '';
+    
+    if (!location.measurements || location.measurements.length === 0) {
+        return;
+    }
+    
+    // Group measurements by month
+    const monthGroups = {};
+    location.measurements.forEach(measurement => {
+        if (measurement.start_date) {
+            const date = new Date(measurement.start_date);
+            const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+            if (!monthGroups[monthKey]) {
+                monthGroups[monthKey] = [];
+            }
+            monthGroups[monthKey].push(measurement);
+        }
+    });
+    
+    // Create month items
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    Object.keys(monthGroups).sort().reverse().forEach(monthKey => {
+        const [year, month] = monthKey.split('-');
+        const measurements = monthGroups[monthKey];
+        const avgValue = measurements.reduce((sum, m) => sum + parseFloat(m.no2_concentration || 0), 0) / measurements.length;
+        
+        const monthItem = document.createElement('div');
+        monthItem.className = 'month-item';
+        monthItem.innerHTML = `
+            <div class="month-name">${monthNames[parseInt(month)]}</div>
+            <div class="month-value">${Math.round(avgValue)} µg/m³</div>
+        `;
+        monthSelector.appendChild(monthItem);
+    });
+}
+
+function closeLocationDetails() {
+    locationDetailsPanel.classList.remove('active');
+    currentLocationData = null;
+}
+
+// Close panel events
+closeLocationPanel.addEventListener('click', closeLocationDetails);
+locationPanelOverlay.addEventListener('click', closeLocationDetails);
+
+// Year navigation (placeholder functionality)
+document.getElementById('prevYear').addEventListener('click', function() {
+    // TODO: Implement year navigation
+    console.log('Previous year');
+});
+
+document.getElementById('nextYear').addEventListener('click', function() {
+    // TODO: Implement year navigation
+    console.log('Next year');
+});

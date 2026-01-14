@@ -33,8 +33,47 @@
             </select>
         </div>
         <div class="sidebar-buttons">
-            <button class="sidebar-button button-login">Log in</button>
-            <button class="sidebar-button button-export">Export Data</button>
+            <a href="https://knmi.waijenbergmedia.nl/admin" target="_blank" class="sidebar-button button-login">Log in</a>
+            <a class="sidebar-button button-export">Export Data</a>
+        </div>
+    </div>
+    <div class="location-details-panel" id="locationDetailsPanel">
+        <div class="location-panel-overlay" id="locationPanelOverlay"></div>
+        <div class="location-panel-content">
+            <div class="location-header">
+                <div class="location-date" id="locationDate">November 2025</div>
+                <div class="location-name-header" id="locationNameHeader">Adum</div>
+                <div class="location-value" id="locationValue">5 µg/m³</div>
+            </div>
+            <div class="location-chart-section">
+                <div class="chart-title">Nitrogen levels in µg/m³ 2025</div>
+                <div class="chart-container">
+                    <div class="chart-y-axis">
+                        <div class="y-axis-label">Nitrogen lvl in µg/m³</div>
+                        <div class="y-axis-arrow">↑</div>
+                    </div>
+                    <div class="chart-area">
+                        <div class="chart-bars" id="chartBars"></div>
+                        <div class="chart-x-axis">
+                            <div class="x-axis-label">Date in Month</div>
+                            <div class="x-axis-arrow">→</div>
+                        </div>
+                    </div>
+                    <div class="chart-info-icon">i</div>
+                </div>
+            </div>
+            <div class="location-navigation">
+                <button class="nav-arrow nav-arrow-left" id="prevYear">←</button>
+                <div class="location-year" id="locationYear">2026</div>
+                <button class="nav-arrow nav-arrow-right" id="nextYear">→</button>
+            </div>
+            <div class="location-month-selector" id="locationMonthSelector">
+                <div class="month-item">
+                    <div class="month-name">Oktober</div>
+                    <div class="month-value">48 µg/m³</div>
+                </div>
+            </div>
+            <button class="close-location-panel" id="closeLocationPanel">×</button>
         </div>
     </div>
     <div class="container">
