@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNMI Data</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">
+                <img src="https://www.figma.com/api/mcp/asset/a7898d8e-32c6-464e-b0d9-70bc0cacf852" alt="AfricAir Lab Logo">
+            </div>
+            <div class="logo-text">AfricAir Lab</div>
+        </div>
+        <div class="header-right">
+            <button class="hamburger-menu" id="hamburgerMenu" aria-label="Toggle menu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
+        </div>
+    </header>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <div class="dropdown-menu" id="dropdownMenu">
+        <div class="search-container">
+            <img src="https://www.figma.com/api/mcp/asset/8ae6659d-1571-4967-8d51-cc0a1a7d0213" alt="Search" class="search-icon">
+            <select class="city-dropdown" id="cityDropdown">
+            </select>
+        </div>
+        <div class="sidebar-buttons">
+            <button class="sidebar-button button-login">Log in</button>
+            <button class="sidebar-button button-export">Export Data</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="map-container" id="mapContainer">
+            <div id="map"></div>
+        </div>
+        <div id="data">
+            <div class="loading">Loading data...</div>
+        </div>
+    </div> 
+
+<script src="script.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+</body>
+</html>
