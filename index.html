@@ -32,6 +32,9 @@
             <select class="city-dropdown" id="cityDropdown">
             </select>
         </div>
+        <div class="locations-list" id="locationsList">
+            <!-- Location items will be populated here -->
+        </div>
         <div class="sidebar-buttons">
             <a href="https://knmi.waijenbergmedia.nl/admin" target="_blank" class="sidebar-button button-login">Log in</a>
             <a class="sidebar-button button-export">Export Data</a>
@@ -59,7 +62,10 @@
                             <div class="x-axis-arrow">→</div>
                         </div>
                     </div>
-                    <div class="chart-info-icon">i</div>
+                    <div class="chart-info-icon">
+                        i
+                        <div class="chart-info-tooltip">This threshold line represents the EU international limit values. The limit value is 60 µg/m³.</div>
+                    </div>
                 </div>
             </div>
             <div class="location-navigation">
@@ -107,6 +113,7 @@
         </div>
     </div> 
 
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="script.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="

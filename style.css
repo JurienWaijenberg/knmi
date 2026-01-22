@@ -102,7 +102,7 @@ body {
 }
 .search-container {
     position: relative;
-    margin-bottom: auto;
+    margin-bottom: 20px;
 }
 .city-dropdown {
     width: 100%;
@@ -142,12 +142,63 @@ body {
     pointer-events: none;
     z-index: 1;
 }
+.locations-list {
+    margin: 0 0 20px 0;
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+.location-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.location-list-item:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+    transform: translateX(5px);
+}
+.location-list-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.location-list-content {
+    flex: 1;
+    min-width: 0;
+}
+.location-list-name {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #197c7b;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.location-list-city {
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: #7a7a7a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 .sidebar-buttons {
     display: flex;
     flex-direction: column;
     gap: 11px;
-    margin: auto auto 20px auto;
-    display: flex;
+    margin-top: auto;
     justify-content: center;
     align-items: center;
     text-decoration: none;
@@ -444,7 +495,7 @@ h1 {
 .chart-bars::before {
     content: '';
     position: absolute;
-    top: 50%;
+    top: 40%;
     left: 0;
     right: 0;
     height: 1px;
@@ -452,18 +503,21 @@ h1 {
     z-index: 0;
 }
 
-.chart-bar {
-    flex: 1;
-    background-color: #043931;
-    border-radius: 8px;
-    min-width: 21px;
-    max-width: 21px;
-    transition: opacity 0.2s ease;
-    position: relative;
+.chart-bars svg {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    bottom: 0;
+    left: 0;
     z-index: 1;
 }
 
-.chart-bar:hover {
+.chart-bars rect.chart-bar {
+    fill: #043931;
+    transition: opacity 0.2s ease;
+}
+
+.chart-bars rect.chart-bar:hover {
     opacity: 0.8;
 }
 
@@ -507,6 +561,45 @@ h1 {
     font-size: 20px;
     font-weight: 700;
     cursor: pointer;
+    z-index: 10;
+}
+
+.chart-info-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    width: 280px;
+    padding: 12px 16px;
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.chart-info-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(0, 0, 0, 0.9);
+}
+
+.chart-info-icon:hover .chart-info-tooltip {
+    opacity: 1;
+    visibility: visible;
 }
 
 .location-navigation {
@@ -554,14 +647,8 @@ h1 {
     border-radius: 25px;
     padding: 15px 20px;
     margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
 }
 
-.month-item:hover {
-    background-color: #f5f5f5;
-    border-color: #0c5554;
-}
 
 .month-name {
     font-family: 'Inter', Arial, sans-serif;

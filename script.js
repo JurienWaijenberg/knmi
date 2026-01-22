@@ -111,6 +111,8 @@ function renderCities(citiesData) {
     dataContainer.innerHTML = html;
 }
 
+
+
 // Function to populate city dropdown
 function populateCityDropdown(citiesData) {
     const cityDropdown = document.getElementById('cityDropdown');
@@ -126,6 +128,57 @@ function populateCityDropdown(citiesData) {
     // Set Kumasi as default selection
     cityDropdown.value = 'Kumasi';
 }
+
+// Function to populate locations list in the dropdown menu
+function populateLocationsList(citiesData) {
+    const locationsList = document.getElementById('locationsList');
+    locationsList.innerHTML = '';
+    
+    // Collect all locations from all cities
+    const allLocations = [];
+    citiesData.forEach(city => {
+        if (city.locations && city.locations.length > 0) {
+            city.locations.forEach(location => {
+                // Store location with city name for display
+                allLocations.push({
+                    ...location,
+                    cityName: city.name
+                });
+            });
+        }
+    });
+    
+    // Create list items for each location
+    allLocations.forEach(location => {
+        const listItem = document.createElement('div');
+        listItem.className = 'location-list-item';
+        
+        // Get the last NO₂ value for color indicator
+        const lastNO2Value = getLastNO2Value(location);
+        const locationColor = getColorForNO2(lastNO2Value);
+        
+        // Create location item content
+        listItem.innerHTML = `
+            <div class="location-list-indicator" style="background-color: ${locationColor};"></div>
+            <div class="location-list-content">
+                <div class="location-list-name">${location.name || 'Unknown Location'}</div>
+                <div class="location-list-city">${location.cityName}</div>
+            </div>
+        `;
+        
+        // Add click handler to show location details
+        listItem.addEventListener('click', function() {
+            showLocationDetails(location);
+            // Close the dropdown menu after clicking
+            toggleSidebar();
+        });
+        
+        locationsList.appendChild(listItem);
+    });
+}
+
+
+
 
 // Function to initialize or update the map
 function updateMap(selectedCity) {
@@ -223,6 +276,9 @@ function updateMap(selectedCity) {
     }, 100);
 }
 
+
+
+
 // Function to filter cities by selected city
 function filterCitiesBySelection(selectedCity) {
     const allCities = document.querySelectorAll('.city');
@@ -264,6 +320,9 @@ fetch('https://knmi.waijenbergmedia.nl/api/v1/cities?with=locations.measurements
         
         // Populate dropdown
         populateCityDropdown(allCitiesData);
+        
+        // Populate locations list
+        populateLocationsList(allCitiesData);
         
         // Render all cities initially
         renderCities(allCitiesData);
@@ -310,11 +369,11 @@ function showLocationDetails(location) {
         locationDate.textContent = 'No data';
     }
     
-    // Generate chart bars
-    generateChartBars(location);
-    
-    // Generate month selector
+    // Generate month selector first (needed for linking)
     generateMonthSelector(location);
+    
+    // Generate chart bars (after month selector so we can link them)
+    generateChartBars(location);
     
     // Show panel
     locationDetailsPanel.classList.add('active');
@@ -328,39 +387,124 @@ function generateChartBars(location) {
         return;
     }
     
-    // Get measurements and sort by date
+    // Get measurements with valid month and NO₂ concentration
     const measurements = [...location.measurements]
-        .filter(m => m.start_date && !isNaN(parseFloat(m.no2_concentration)))
+        .filter(m => m.month != null && !isNaN(parseFloat(m.no2_concentration)))
         .sort((a, b) => {
-            return new Date(a.start_date) - new Date(b.start_date);
+            // Sort by month - convert to string for comparison
+            const monthA = String(a.month);
+            const monthB = String(b.month);
+            return monthA.localeCompare(monthB);
         });
     
     if (measurements.length === 0) {
         return;
     }
     
-    // Limit to last 12 measurements for better visualization
-    const displayMeasurements = measurements.slice(-12);
+    // Group measurements by month
+    const monthGroups = {};
+    measurements.forEach(measurement => {
+        const monthKey = String(measurement.month); // Convert to string for consistent key
+        if (!monthGroups[monthKey]) {
+            monthGroups[monthKey] = [];
+        }
+        monthGroups[monthKey].push(measurement);
+    });
     
-    // Calculate max value for scaling (add some padding)
-    const values = displayMeasurements.map(m => parseFloat(m.no2_concentration || 0));
-    const maxValue = Math.max(...values);
-    const minValue = Math.min(...values);
-    const range = maxValue - minValue;
-    const paddedMax = maxValue + (range * 0.1); // Add 10% padding
-    const chartHeight = 220; // Height of chart area in pixels
+    // Get sorted month keys and take last 12
+    const sortedMonthKeys = Object.keys(monthGroups).sort().slice(-12);
+    
+    // Create data for bars: one per month with average value
+    const barData = sortedMonthKeys.map(monthKey => {
+        const monthMeasurements = monthGroups[monthKey];
+        const avgValue = monthMeasurements.reduce((sum, m) => sum + parseFloat(m.no2_concentration || 0), 0) / monthMeasurements.length;
+        return {
+            monthKey: monthKey,
+            value: avgValue,
+            measurements: monthMeasurements
+        };
+    });
+    
+    if (barData.length === 0) {
+        return;
+    }
+    
+    // Chart dimensions
+    const chartHeight = 220;
+    const chartWidth = chartBars.offsetWidth || 393; // Use actual width or fallback
+    const barGap = 8;
+    
+    // Fixed scale: 0 to 100 µg/m³ for consistent comparison across locations
+    const maxValue = 100;
+    const minValue = 0;
+    
+    // Create SVG using D3
+    const svg = d3.select(chartBars)
+        .append('svg')
+        .attr('width', chartWidth)
+        .attr('height', chartHeight)
+        .style('position', 'absolute')
+        .style('bottom', '0')
+        .style('left', '0');
+    
+    // Create scales
+    const xScale = d3.scaleBand()
+        .domain(d3.range(barData.length))
+        .range([0, chartWidth])
+        .paddingInner(barGap / (chartWidth / barData.length));
+    
+    const yScale = d3.scaleLinear()
+        .domain([minValue, maxValue])
+        .range([chartHeight, 0]);
     
     // Create bars
-    displayMeasurements.forEach(measurement => {
-        const value = parseFloat(measurement.no2_concentration || 0);
-        const barHeight = paddedMax > 0 ? Math.max((value / paddedMax) * chartHeight, 5) : 5; // Minimum 5px height
-        
-        const bar = document.createElement('div');
-        bar.className = 'chart-bar';
-        bar.style.height = `${barHeight}px`;
-        bar.title = `${value.toFixed(1)} µg/m³`;
-        chartBars.appendChild(bar);
-    });
+    const bars = svg.selectAll('rect')
+        .data(barData)
+        .enter()
+        .append('rect')
+        .attr('x', (d, i) => xScale(i))
+        .attr('y', d => {
+            const barHeight = Math.max((d.value / maxValue) * chartHeight, 0);
+            return chartHeight - barHeight;
+        })
+        .attr('width', xScale.bandwidth())
+        .attr('height', d => {
+            return Math.max((d.value / maxValue) * chartHeight, 0);
+        })
+        .attr('fill', '#043931')
+        .attr('rx', 8) // Border radius
+        .attr('ry', 8)
+        .style('transition', 'opacity 0.2s ease')
+        .attr('class', 'chart-bar')
+        .attr('data-month-key', d => d.monthKey)
+        .on('mouseover', function(event, d) {
+            d3.select(this).style('opacity', 0.8);
+            
+            // Hide all month items
+            const monthItems = document.querySelectorAll('.month-item');
+            monthItems.forEach(item => {
+                item.style.display = 'none';
+            });
+            
+            // Show only the matching month item
+            const matchingMonthItem = document.querySelector(`.month-item[data-month-key="${d.monthKey}"]`);
+            if (matchingMonthItem) {
+                matchingMonthItem.style.display = 'block';
+            }
+        })
+        .on('mouseout', function() {
+            d3.select(this).style('opacity', 1);
+            
+            // Show all month items
+            const monthItems = document.querySelectorAll('.month-item');
+            monthItems.forEach(item => {
+                item.style.display = 'block';
+            });
+        });
+    
+    // Add tooltips
+    bars.append('title')
+        .text(d => `${d.value.toFixed(1)} µg/m³`);
 }
 
 function generateMonthSelector(location) {
@@ -371,33 +515,65 @@ function generateMonthSelector(location) {
         return;
     }
     
+    // Get measurements with valid month and NO₂ concentration
+    const measurements = [...location.measurements]
+        .filter(m => m.month != null && !isNaN(parseFloat(m.no2_concentration)))
+        .sort((a, b) => {
+            // Sort by month - convert to string for comparison
+            const monthA = String(a.month);
+            const monthB = String(b.month);
+            return monthA.localeCompare(monthB);
+        });
+    
     // Group measurements by month
     const monthGroups = {};
-    location.measurements.forEach(measurement => {
-        if (measurement.start_date) {
-            const date = new Date(measurement.start_date);
-            const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-            if (!monthGroups[monthKey]) {
-                monthGroups[monthKey] = [];
-            }
-            monthGroups[monthKey].push(measurement);
+    measurements.forEach(measurement => {
+        const monthKey = String(measurement.month); // Convert to string for consistent key
+        if (!monthGroups[monthKey]) {
+            monthGroups[monthKey] = [];
         }
+        monthGroups[monthKey].push(measurement);
     });
     
-    // Create month items
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
+    // Get sorted month keys and take last 12 (same as bars)
+    const sortedMonthKeys = Object.keys(monthGroups).sort().slice(-12);
     
-    Object.keys(monthGroups).sort().reverse().forEach(monthKey => {
-        const [year, month] = monthKey.split('-');
-        const measurements = monthGroups[monthKey];
-        const avgValue = measurements.reduce((sum, m) => sum + parseFloat(m.no2_concentration || 0), 0) / measurements.length;
+    // Helper function to format month name (handles formats like "2025-11", "11", "November", etc.)
+    function formatMonthName(monthKey) {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        // If it's in format "YYYY-MM" or "YYYY-M"
+        if (monthKey.includes('-')) {
+            const parts = monthKey.split('-');
+            if (parts.length >= 2) {
+                const monthIndex = parseInt(parts[1]) - 1; // Convert to 0-based index
+                if (monthIndex >= 0 && monthIndex < 12) {
+                    return monthNames[monthIndex];
+                }
+            }
+        }
+        
+        // If it's just a number (1-12), convert to month name
+        const monthNum = parseInt(monthKey);
+        if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            return monthNames[monthNum - 1]; // Convert 1-12 to 0-11 index
+        }
+        
+        // If it's already a month name, return as is (capitalize first letter)
+        return monthKey.charAt(0).toUpperCase() + monthKey.slice(1).toLowerCase();
+    }
+    
+    sortedMonthKeys.forEach(monthKey => {
+        const monthMeasurements = monthGroups[monthKey];
+        const avgValue = monthMeasurements.reduce((sum, m) => sum + parseFloat(m.no2_concentration || 0), 0) / monthMeasurements.length;
         
         const monthItem = document.createElement('div');
         monthItem.className = 'month-item';
+        monthItem.setAttribute('data-month-key', monthKey);
         monthItem.innerHTML = `
-            <div class="month-name">${monthNames[parseInt(month)]}</div>
-            <div class="month-value">${Math.round(avgValue)} µg/m³</div>
+            <div class="month-name">${formatMonthName(monthKey)}</div>
+            <div class="month-value">${avgValue.toFixed(1)} µg/m³</div>
         `;
         monthSelector.appendChild(monthItem);
     });
