@@ -130,13 +130,18 @@ function populateCityDropdown(citiesData) {
 }
 
 // Function to populate locations list in the dropdown menu
-function populateLocationsList(citiesData) {
+function populateLocationsList(citiesData, selectedCity = null) {
     const locationsList = document.getElementById('locationsList');
     locationsList.innerHTML = '';
     
-    // Collect all locations from all cities
+    // Collect locations - filter by selected city if provided
     const allLocations = [];
     citiesData.forEach(city => {
+        // If a city is selected, only show locations from that city
+        if (selectedCity && city.name !== selectedCity) {
+            return;
+        }
+        
         if (city.locations && city.locations.length > 0) {
             city.locations.forEach(location => {
                 // Store location with city name for display
@@ -300,7 +305,10 @@ function filterCitiesBySelection(selectedCity) {
 // City dropdown change event
 const cityDropdown = document.getElementById('cityDropdown');
 cityDropdown.addEventListener('change', function() {
-    filterCitiesBySelection(this.value);
+    const selectedCity = this.value;
+    filterCitiesBySelection(selectedCity);
+    // Update locations list to show only locations from selected city
+    populateLocationsList(allCitiesData, selectedCity);
 });
 
 // data fetch
@@ -321,14 +329,14 @@ fetch('https://knmi.waijenbergmedia.nl/api/v1/cities?with=locations.measurements
         // Populate dropdown
         populateCityDropdown(allCitiesData);
         
-        // Populate locations list
-        populateLocationsList(allCitiesData);
-        
         // Render all cities initially
         renderCities(allCitiesData);
         
         // Filter and show Kumasi by default
         filterCitiesBySelection('Kumasi');
+        
+        // Populate locations list with Kumasi locations
+        populateLocationsList(allCitiesData, 'Kumasi');
     })
     .catch(error => {
         console.error('Error:', error);

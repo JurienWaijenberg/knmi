@@ -144,8 +144,8 @@ body {
 }
 .locations-list {
     margin: 0 0 20px 0;
-    max-height: calc(100vh - 400px);
     overflow-y: auto;
+    overflow-x: hidden;
     flex: 1;
     min-height: 0;
 }
@@ -368,7 +368,8 @@ h1 {
     position: absolute;
     bottom: 0;
     right: 0;
-    width: 509px;
+    width: 100%;
+    max-width: 500px;
     height: calc(100vh - 70px);
     background-color: rgba(243, 242, 242, 0.8);
     padding: 20px;
